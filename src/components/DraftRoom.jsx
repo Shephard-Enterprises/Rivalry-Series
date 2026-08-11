@@ -6,14 +6,16 @@ import Countdown from './Countdown'
 
 export default function DraftRoom({ onBack }) {
   const [tab, setTab] = useState('ALL')
-  const [deadline] = useState(() => nextDraftDeadline())
-  const { picks, captains, syncStatus, currentManager, complete, roster, canDraft, draft, chooseCaptain } = useDraft()
+  const [fallbackDeadline] = useState(() => nextDraftDeadline())
+  const { week, picks, captains, profile, syncStatus, error, currentManager, complete, draftOpen, roster, canDraft, draft, chooseCaptain } = useDraft()
+  const deadline = week ? new Date(week.draft_closes_at) : fallbackDeadline
   const available = players.filter((player) => (tab === 'ALL' || player.position === tab) && !picks.some((pick) => pick.playerId === player.id))
   const slotLabel = (player, team) => team.filter((item) => item.position === player.position).indexOf(player) < rosterLimits[player.position] ? player.position : 'FLEX'
 
   return <div className="draft-room">
-    <header className="draft-nav"><button onClick={onBack} className="back-button">←</button><div><p className="company">Rivalry Series</p><h1>Week 1 Draft</h1></div><span className="mock-badge">{syncStatus === 'demo' ? 'Prototype · Mock data' : `Supabase · ${syncStatus}`}</span></header>
-    <section className="turn-banner"><div><span className="live-pill"><i /> {complete ? 'Draft complete' : 'On the clock'}</span><h2>{complete ? 'Choose your captains' : `${currentManager}, you’re up.`}</h2><p>{complete ? 'Captains lock at kickoff of the first game.' : `Pick ${picks.length + 1} of 14 · All selections are final`}</p></div><div><p className="timer-label">Draft closes Wednesday · 11:59 PM</p><Countdown deadline={deadline} /></div></section>
+    <header className="draft-nav"><button onClick={onBack} className="back-button">←</button><div><p className="company">Rivalry Series</p><h1>Week {week?.nfl_week ?? 1} Draft</h1></div><span className="mock-badge">{syncStatus === 'demo' ? 'Prototype · Mock data' : `Supabase · ${syncStatus}`}</span></header>
+    <section className="turn-banner"><div><span className="live-pill"><i /> {complete ? 'Draft complete' : draftOpen ? 'On the clock' : 'Draft scheduled'}</span><h2>{complete ? 'Choose your captains' : draftOpen ? `${currentManager}, you’re up.` : 'Week 1 opens September 7.'}</h2><p>{complete ? 'Captains lock at kickoff of the first game.' : draftOpen ? `Pick ${picks.length + 1} of 14 · All selections are final` : `${profile?.display_name ?? 'Manager'}, your live roster is connected and ready.`}</p></div><div><p className="timer-label">{draftOpen ? 'Draft closes' : 'Draft opens Monday · 12:00 AM PT'}</p><Countdown deadline={draftOpen ? deadline : week ? new Date(week.draft_opens_at) : deadline} /></div></section>
+    {error && <p className="draft-error" role="alert">{error}</p>}
     <div className="draft-layout">
       <section className="player-board"><div className="board-heading"><div><p className="eyebrow">Player pool</p><h2>Available players</h2></div><span>{available.length} available</span></div><div className="position-tabs">{positions.map((position) => <button className={tab === position ? 'active' : ''} onClick={() => setTab(position)} key={position}>{position}</button>)}</div>
         <div className="player-list">{available.map((player, rank) => <article className={`player-card ${!canDraft(player) ? 'disabled' : ''}`} key={player.id}><span className="rank">{rank + 1}</span><div className={`position-chip pos-${player.position.toLowerCase()}`}>{player.position}</div><div className="player-info"><h3>{player.name} {player.status !== 'Healthy' && <span className="injury" title={player.status}>!</span>}</h3><p>{player.team} · {player.opponent} {player.status !== 'Healthy' && <em>{player.status}</em>}</p></div><div className="projection"><span>Projected</span><strong>{player.projection}</strong></div><button onClick={() => draft(player)} disabled={!canDraft(player)}>Draft</button></article>)}</div>
