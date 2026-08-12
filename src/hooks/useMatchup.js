@@ -20,8 +20,9 @@ export function useMatchup() {
       supabase.from('manager_win_probabilities').select('manager_id, projected_final, players_remaining, win_probability').eq('week_id', activeWeek.id),
       supabase.from('game_day_events').select('id, type, title, body, manager_id, player_id, data, occurred_at').eq('week_id', activeWeek.id).order('occurred_at', { ascending: false }).limit(30),
     ])
-    if (scoreError || resultError || playerError || probabilityError || timelineError) { setError(scoreError?.message || resultError?.message || playerError?.message || probabilityError?.message || timelineError?.message); return }
-    setTimeline(events ?? [])
+    if (scoreError || resultError || playerError || probabilityError) { setError(scoreError?.message || resultError?.message || playerError?.message || probabilityError?.message); return }
+    setError('')
+    setTimeline(timelineError ? [] : (events ?? []))
     setMatchup(managers.map((name) => {
       const profile = managerProfiles.find((item) => item.display_name === name)
       const score = scores?.find((item) => item.manager_id === profile?.id)
