@@ -23,7 +23,7 @@ function App() {
     <div className="ambient ambient-one" /><div className="ambient ambient-two" />
     <div className="app-actions"><button className="chat-button" type="button" onClick={() => setView('chat')} aria-label="Open rivalry chat">💬</button><button className="notification-button" type="button" onClick={() => setNotificationsOpen(true)} aria-label={`${social.unreadCount} unread notifications`}>♢{social.unreadCount > 0 && <span>{social.unreadCount > 9 ? '9+' : social.unreadCount}</span>}</button><button className="sign-out-button" type="button" onClick={() => supabase?.auth.signOut()}>Sign out</button></div>
     {view === 'home' ? <Home onEnter={() => setView('draft')} onHistory={() => setView('history')} onTest={commissioner ? () => setView('test') : null} onAdmin={commissioner ? () => setView('admin') : null} /> : view === 'admin' ? <AdminControlPanel onBack={() => setView('home')} /> : view === 'test' ? <TestLab onBack={() => setView('home')} /> : view === 'chat' ? <Chat social={social} onBack={() => setView('home')} /> : view === 'history' ? <RivalryHistory onBack={() => setView('home')} /> : <DraftRoom onBack={() => setView('home')} />}
-    {notificationsOpen && <NotificationPanel social={social} push={push} onClose={() => setNotificationsOpen(false)} onOpenChat={() => setView('chat')} />}
+    {notificationsOpen && <NotificationPanel social={social} push={push} onClose={() => setNotificationsOpen(false)} onOpenChat={() => setView('chat')} onOpenDraft={() => setView('draft')} />}
     <footer><span>Rivalry Series</span><p>Built on endless friendship</p><span>Est. 2026</span></footer>
   </main></AuthGate>
 }
