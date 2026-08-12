@@ -3,6 +3,7 @@ import { useNews } from '../hooks/useNews'
 import LiveMatchup from './LiveMatchup'
 import GameDayTimeline from './GameDayTimeline'
 import WeekHubPanel from './WeekHubPanel'
+import PregameReport from './PregameReport'
 import ScrooberReport from './ScrooberReport'
 import { useRecaps } from '../hooks/useRecaps'
 
@@ -21,6 +22,7 @@ export default function Home({ onEnter, onHistory, onTest, onAdmin }) {
       <WeekHubPanel week={week} progress={progress} connected={connected} onEnter={onEnter} onHistory={onHistory} onTest={onTest} onAdmin={onAdmin} />
       {error && <p className="draft-error">Live scores could not load: {error}</p>}
     </section>
+    <PregameReport week={week} matchup={matchup} captainCount={progress.captainCount} />
     <LiveMatchup matchup={matchup} lastScoreSync={lastScoreSync} />
     <GameDayTimeline events={timeline} />
     <ScrooberReport report={recaps[0]} />
