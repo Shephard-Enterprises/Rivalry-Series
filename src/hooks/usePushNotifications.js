@@ -15,6 +15,7 @@ export function usePushNotifications(profile, unreadCount) {
   const isiPhone = /iPhone|iPad|iPod/.test(navigator.userAgent)
   const [status, setStatus] = useState(supported ? 'checking' : 'unsupported')
   const [error, setError] = useState('')
+  const [testStatus, setTestStatus] = useState('idle')
 
   const syncSubscription = useCallback(async (subscription) => {
     if (!profile || !subscription) return
@@ -55,5 +56,12 @@ export function usePushNotifications(profile, unreadCount) {
     } catch (pushError) { setError(pushError.message); setStatus('error') }
   }
 
-  return { status, error, enable, isiPhone, standalone }
+  const sendTest = async () => {
+    setError(''); setTestStatus('sending')
+    const { error: testError } = await supabase.rpc('send_test_push_notification')
+    if (testError) { setError(testError.message); setTestStatus('error'); return }
+    setTestStatus('queued')
+  }
+
+  return { status, error, testStatus, enable, sendTest, isiPhone, standalone }
 }
