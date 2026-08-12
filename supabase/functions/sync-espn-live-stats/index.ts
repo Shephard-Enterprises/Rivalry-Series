@@ -133,7 +133,17 @@ Deno.serve(async (request) => {
         const lines = readBoxScore(await summaryResponse.json())
         const espnIds = [...lines.keys()]
         if (!espnIds.length) continue
-        const { data: players, error: playerError } = await admin.from('nfl_players').select('id, espn_id').in('espn_id', espnIds)
+        const teams = (event?.competitions?.[0]?.competitors ?? []).map((competitor: any) => competitor?.team?.abbreviation).filter(Boolean)
+        const { data: drafted, error: draftedError } = await admin.from('draft_picks')
+          .select('player_id, nfl_players!inner(espn_id, nfl_team)')
+          .eq('week_id', week.id).in('nfl_players.nfl_team', teams)
+        if (draftedError) throw draftedError
+        for (const pick of drafted ?? []) {
+          const espnId = pick?.nfl_players?.espn_id
+          if (espnId && !lines.has(espnId)) lines.set(espnId, emptyLine())
+        }
+        const allEspnIds = [...lines.keys()]
+        const { data: players, error: playerError } = await admin.from('nfl_players').select('id, espn_id').in('espn_id', allEspnIds)
         if (playerError) throw playerError
         const playerIds = new Map((players ?? []).map((player) => [player.espn_id, player.id]))
         const state = gameState(event)
