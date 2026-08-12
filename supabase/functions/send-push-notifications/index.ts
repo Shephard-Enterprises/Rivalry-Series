@@ -14,8 +14,13 @@ Deno.serve(async (request) => {
 
   webpush.setVapidDetails('mailto:justinshephard8@gmail.com', publicKey, privateKey)
   const admin = createClient(url, key)
-  const { data: notifications, error } = await admin.from('notifications')
-    .select('id, recipient_id, type, title, body').is('push_sent_at', null).order('created_at').limit(50)
+  const body = await request.json().catch(() => ({}))
+  const delaySeconds = Math.min(Math.max(Number(body.delay_seconds) || 0, 0), 10)
+  if (delaySeconds) await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000))
+  let notificationQuery = admin.from('notifications')
+    .select('id, recipient_id, type, title, body').is('push_sent_at', null).lte('push_not_before', new Date().toISOString()).order('created_at').limit(50)
+  if (body.notification_id) notificationQuery = notificationQuery.eq('id', body.notification_id)
+  const { data: notifications, error } = await notificationQuery
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: jsonHeaders })
 
   let delivered = 0
