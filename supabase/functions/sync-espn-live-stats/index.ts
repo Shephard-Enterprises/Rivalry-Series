@@ -161,6 +161,8 @@ Deno.serve(async (request) => {
       }
       const { error: probabilityError } = await admin.rpc('refresh_win_probabilities', { p_week_id: week.id })
       if (probabilityError) throw probabilityError
+      const { error: timelineError } = await admin.rpc('record_game_day_timeline', { p_week_id: week.id })
+      if (timelineError) throw timelineError
     }
     if (log) await admin.from('provider_sync_log').update({ status: 'success', records_processed: statsUpserted, finished_at: new Date().toISOString() }).eq('id', log.id)
     return new Response(JSON.stringify({ success: true, weeks: weeks?.length ?? 0, games: gamesProcessed, player_stats: statsUpserted }), { headers: jsonHeaders })

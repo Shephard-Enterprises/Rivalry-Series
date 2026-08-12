@@ -1,13 +1,14 @@
 import { useMatchup } from '../hooks/useMatchup'
 import { useNews } from '../hooks/useNews'
 import LiveMatchup from './LiveMatchup'
+import GameDayTimeline from './GameDayTimeline'
 import ScrooberReport from './ScrooberReport'
 import { useRecaps } from '../hooks/useRecaps'
 
 const weeklyDetails = [['Draft', 'Tuesday – Wednesday'], ['Matchup', 'Thursday – Monday'], ['Roster', '7 Players'], ['Scoring', 'Half PPR']]
 
 export default function Home({ onEnter, onHistory, onTest, onAdmin }) {
-  const { week, matchup, error, connected } = useMatchup()
+  const { week, matchup, timeline, error, connected } = useMatchup()
   const { articles, loading: newsLoading, error: newsError } = useNews()
   const { recaps, error: recapError } = useRecaps()
   const draftComplete = matchup.some((manager) => manager.rosterSize > 0)
@@ -22,6 +23,7 @@ export default function Home({ onEnter, onHistory, onTest, onAdmin }) {
       {error && <p className="draft-error">Live scores could not load: {error}</p>}
     </section>
     <LiveMatchup matchup={matchup} />
+    <GameDayTimeline events={timeline} />
     <ScrooberReport report={recaps[0]} />
     {recapError && <p className="draft-error">The Scroober Scrimage Report could not load: {recapError}</p>}
     <section className="week-section"><div className="section-heading"><div><p className="eyebrow">The format</p><h2>This week</h2></div><p>A new head-to-head battle every week.</p></div><div className="detail-grid">{weeklyDetails.map(([label, value]) => <article className="detail-card" key={label}><div className="detail-icon">{label[0]}</div><div><span>{label}</span><strong>{value}</strong></div></article>)}</div></section>

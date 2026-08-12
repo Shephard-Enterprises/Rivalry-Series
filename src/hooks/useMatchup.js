@@ -8,17 +8,20 @@ export function useMatchup() {
   const [week, setWeek] = useState(null)
   const [profiles, setProfiles] = useState([])
   const [matchup, setMatchup] = useState(managers.map(emptyManager))
+  const [timeline, setTimeline] = useState([])
   const [error, setError] = useState('')
 
   const loadScores = useCallback(async (activeWeek, managerProfiles) => {
     if (!supabase || !activeWeek) return
-    const [{ data: scores, error: scoreError }, { data: results, error: resultError }, { data: playerScores, error: playerError }, { data: probabilities, error: probabilityError }] = await Promise.all([
+    const [{ data: scores, error: scoreError }, { data: results, error: resultError }, { data: playerScores, error: playerError }, { data: probabilities, error: probabilityError }, { data: events, error: timelineError }] = await Promise.all([
       supabase.from('manager_week_scores').select('manager_id, fantasy_points, players_final, roster_size, is_official').eq('week_id', activeWeek.id),
       supabase.from('weekly_results').select('manager_id, result'),
       supabase.from('matchup_player_scores').select('*').eq('week_id', activeWeek.id).order('roster_slot'),
       supabase.from('manager_win_probabilities').select('manager_id, projected_final, players_remaining, win_probability').eq('week_id', activeWeek.id),
+      supabase.from('game_day_events').select('id, type, title, body, manager_id, player_id, data, occurred_at').eq('week_id', activeWeek.id).order('occurred_at', { ascending: false }).limit(30),
     ])
-    if (scoreError || resultError || playerError || probabilityError) { setError(scoreError?.message || resultError?.message || playerError?.message || probabilityError?.message); return }
+    if (scoreError || resultError || playerError || probabilityError || timelineError) { setError(scoreError?.message || resultError?.message || playerError?.message || probabilityError?.message || timelineError?.message); return }
+    setTimeline(events ?? [])
     setMatchup(managers.map((name) => {
       const profile = managerProfiles.find((item) => item.display_name === name)
       const score = scores?.find((item) => item.manager_id === profile?.id)
@@ -70,9 +73,10 @@ export function useMatchup() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'player_week_stats', filter: `week_id=eq.${week.id}` }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'draft_picks', filter: `week_id=eq.${week.id}` }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'win_probability_snapshots', filter: `week_id=eq.${week.id}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_day_events', filter: `week_id=eq.${week.id}` }, refresh)
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [week, profiles, loadScores])
 
-  return { week, matchup, error, connected: isSupabaseConfigured }
+  return { week, matchup, timeline, error, connected: isSupabaseConfigured }
 }
