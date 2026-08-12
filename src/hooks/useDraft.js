@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { managers, players, rosterLimits } from '../data/mockPlayers'
+import { managers, players as mockPlayers, rosterLimits } from '../data/mockPlayers'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 export function useDraft() {
@@ -8,6 +8,7 @@ export function useDraft() {
   const [captains, setCaptains] = useState({})
   const [profile, setProfile] = useState(null)
   const [profiles, setProfiles] = useState([])
+  const [playerPool, setPlayerPool] = useState(isSupabaseConfigured ? [] : mockPlayers)
   const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured ? 'connecting' : 'demo')
   const [error, setError] = useState('')
   const [clock, setClock] = useState(0)
@@ -26,8 +27,8 @@ export function useDraft() {
     ])
     if (pickError || captainError) { setError(pickError?.message || captainError?.message); setSyncStatus('error'); return }
     const managerName = (id) => managerProfiles.find((item) => item.id === id)?.display_name
-    setPicks((pickRows ?? []).map((pick) => ({ playerId: Number(pick.player_id), manager: managerName(pick.manager_id), managerId: pick.manager_id })))
-    setCaptains(Object.fromEntries((captainRows ?? []).map((captain) => [managerName(captain.manager_id), Number(captain.player_id)])))
+    setPicks((pickRows ?? []).map((pick) => ({ playerId: String(pick.player_id), manager: managerName(pick.manager_id), managerId: pick.manager_id })))
+    setCaptains(Object.fromEntries((captainRows ?? []).map((captain) => [managerName(captain.manager_id), String(captain.player_id)])))
     setSyncStatus('live')
   }, [])
 
@@ -44,7 +45,19 @@ export function useDraft() {
       if (profilesError || weekError) { setError(profilesError?.message || weekError?.message); setSyncStatus('error'); return }
       const foundProfile = managerProfiles?.find((item) => item.id === userData.user?.id)
       setProfile(foundProfile ?? null); setProfiles(managerProfiles ?? []); setWeek(activeWeek ?? null)
-      if (activeWeek) await loadDraft(activeWeek, managerProfiles ?? [])
+      if (activeWeek) {
+        const { data: weekPlayerRows, error: playerError } = await supabase.from('week_players')
+          .select('player_id, opponent, projection, ranking, available, nfl_players!inner(full_name, position, nfl_team, status, headshot_url, injury_notes)')
+          .eq('week_id', activeWeek.id).eq('available', true).order('ranking', { nullsFirst: false })
+        if (playerError) { setError(playerError.message); setSyncStatus('error'); return }
+        setPlayerPool((weekPlayerRows ?? []).map((row) => ({
+          id: String(row.player_id), name: row.nfl_players.full_name, position: row.nfl_players.position,
+          team: row.nfl_players.nfl_team, opponent: row.opponent || 'Matchup TBD', projection: row.projection,
+          status: row.nfl_players.status.charAt(0).toUpperCase() + row.nfl_players.status.slice(1),
+          injuryNotes: row.nfl_players.injury_notes, headshotUrl: row.nfl_players.headshot_url,
+        })))
+        await loadDraft(activeWeek, managerProfiles ?? [])
+      }
       else setSyncStatus('live')
     }
     initialize()
@@ -68,9 +81,9 @@ export function useDraft() {
   const draftOpen = !supabase
     ? true
     : Boolean(week && profile && clock >= new Date(week.draft_opens_at).getTime() && clock <= new Date(week.draft_closes_at).getTime())
-  const roster = (manager) => picks.filter((pick) => pick.manager === manager).map((pick) => players.find((player) => player.id === pick.playerId)).filter(Boolean)
+  const roster = (manager) => picks.filter((pick) => pick.manager === manager).map((pick) => playerPool.find((player) => String(player.id) === String(pick.playerId))).filter(Boolean)
   const canDraft = (player, manager = currentManager) => {
-    if (!draftOpen || complete || (supabase && profile?.display_name !== currentManager) || picks.some((pick) => pick.playerId === player.id)) return false
+    if (!draftOpen || complete || (supabase && profile?.display_name !== currentManager) || picks.some((pick) => String(pick.playerId) === String(player.id))) return false
     const mine = roster(manager)
     const positionCount = mine.filter((item) => item.position === player.position).length
     if (positionCount < rosterLimits[player.position]) return true
@@ -98,5 +111,5 @@ export function useDraft() {
     else await loadDraft(week, profiles)
   }
 
-  return { week, picks, captains, profile, syncStatus, error, currentManager, complete, draftOpen, roster, canDraft, draft, chooseCaptain }
+  return { week, players: playerPool, picks, captains, profile, syncStatus, error, currentManager, complete, draftOpen, roster, canDraft, draft, chooseCaptain }
 }

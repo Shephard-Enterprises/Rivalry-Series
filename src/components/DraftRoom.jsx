@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { managers, players, positions, rosterLimits } from '../data/mockPlayers'
+import { managers, positions, rosterLimits } from '../data/mockPlayers'
 import { useDraft } from '../hooks/useDraft'
 import { nextDraftDeadline } from '../lib/deadlines'
 import Countdown from './Countdown'
@@ -7,9 +7,10 @@ import Countdown from './Countdown'
 export default function DraftRoom({ onBack }) {
   const [tab, setTab] = useState('ALL')
   const [fallbackDeadline] = useState(() => nextDraftDeadline())
-  const { week, picks, captains, profile, syncStatus, error, currentManager, complete, draftOpen, roster, canDraft, draft, chooseCaptain } = useDraft()
+  const { week, players, picks, captains, profile, syncStatus, error, currentManager, complete, draftOpen, roster, canDraft, draft, chooseCaptain } = useDraft()
   const deadline = week ? new Date(week.draft_closes_at) : fallbackDeadline
-  const available = players.filter((player) => (tab === 'ALL' || player.position === tab) && !picks.some((pick) => pick.playerId === player.id))
+  const allAvailable = players.filter((player) => (tab === 'ALL' || player.position === tab) && !picks.some((pick) => String(pick.playerId) === String(player.id)))
+  const available = allAvailable.slice(0, 20)
   const slotLabel = (player, team) => team.filter((item) => item.position === player.position).indexOf(player) < rosterLimits[player.position] ? player.position : 'FLEX'
 
   return <div className="draft-room">
@@ -17,8 +18,8 @@ export default function DraftRoom({ onBack }) {
     <section className="turn-banner"><div><span className="live-pill"><i /> {complete ? 'Draft complete' : draftOpen ? 'On the clock' : 'Draft scheduled'}</span><h2>{complete ? 'Choose your captains' : draftOpen ? `${currentManager}, you’re up.` : 'Week 1 opens September 7.'}</h2><p>{complete ? 'Captains lock at kickoff of the first game.' : draftOpen ? `Pick ${picks.length + 1} of 14 · All selections are final` : `${profile?.display_name ?? 'Manager'}, your live roster is connected and ready.`}</p></div><div><p className="timer-label">{draftOpen ? 'Draft closes' : 'Draft opens Monday · 12:00 AM PT'}</p><Countdown deadline={draftOpen ? deadline : week ? new Date(week.draft_opens_at) : deadline} /></div></section>
     {error && <p className="draft-error" role="alert">{error}</p>}
     <div className="draft-layout">
-      <section className="player-board"><div className="board-heading"><div><p className="eyebrow">Player pool</p><h2>Available players</h2></div><span>{available.length} available</span></div><div className="position-tabs">{positions.map((position) => <button className={tab === position ? 'active' : ''} onClick={() => setTab(position)} key={position}>{position}</button>)}</div>
-        <div className="player-list">{available.map((player, rank) => { const eligible = canDraft(player); return <article className={`player-card ${!eligible ? 'disabled' : ''}`} key={player.id}><span className="rank">{rank + 1}</span><div className={`position-chip pos-${player.position.toLowerCase()}`}>{player.position}</div><div className="player-info"><h3>{player.name} {player.status !== 'Healthy' && <span className="injury" title={player.status}>!</span>}</h3><p>{player.team} · {player.opponent} {player.status !== 'Healthy' && <em>{player.status}</em>}</p></div><div className="projection"><span>Projected</span><strong>{player.projection}</strong></div><button onClick={() => draft(player)} disabled={!eligible}>{eligible ? 'Draft' : !draftOpen ? 'Locked' : `${currentManager}’s turn`}</button></article> })}</div>
+      <section className="player-board"><div className="board-heading"><div><p className="eyebrow">Player pool</p><h2>Available players</h2></div><span>Top {available.length} of {allAvailable.length}</span></div><div className="position-tabs">{positions.map((position) => <button className={tab === position ? 'active' : ''} onClick={() => setTab(position)} key={position}>{position}</button>)}</div>
+        <div className="player-list">{available.map((player, rank) => { const eligible = canDraft(player); return <article className={`player-card ${!eligible ? 'disabled' : ''}`} key={player.id}><span className="rank">{rank + 1}</span>{player.headshotUrl ? <img className="player-headshot" src={player.headshotUrl} alt="" loading="lazy" onError={(event) => { event.currentTarget.hidden = true }} /> : <div className={`position-chip pos-${player.position.toLowerCase()}`}>{player.position}</div>}<div className="player-info"><h3>{player.name} {player.status !== 'Healthy' && <span className="injury" title={player.injuryNotes || player.status}>!</span>}</h3><p>{player.position} · {player.team} · {player.opponent} {player.status !== 'Healthy' && <em>{player.status}</em>}</p></div><div className="projection"><span>Projected</span><strong>{player.projection ?? '—'}</strong></div><button onClick={() => draft(player)} disabled={!eligible}>{eligible ? 'Draft' : !draftOpen ? 'Locked' : `${currentManager}’s turn`}</button></article> })}</div>
       </section>
       <aside className="draft-sidebar">
         {managers.map((manager) => { const team = roster(manager); return <section className="roster-card" key={manager}><div className="roster-head"><div className={`mini-avatar avatar-${manager.toLowerCase()}`}>{manager[0]}</div><div><span>{manager}’s roster</span><strong>{team.length}/7 players</strong></div></div><div className="roster-slots">{team.map((player) => <div className="roster-player" key={player.id}><span>{slotLabel(player, team)}</span><strong>{player.name}</strong>{complete && <button className={captains[manager] === player.id ? 'captain active' : 'captain'} onClick={() => chooseCaptain(manager, player.id)}>★</button>}</div>)}{Array.from({ length: 7 - team.length }).map((_, index) => <div className="empty-slot" key={index}>Open roster spot</div>)}</div></section> })}
