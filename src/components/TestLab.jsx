@@ -5,6 +5,7 @@ export default function TestLab({ onBack }) {
   const [state, setState] = useState({ week: null, profiles: [], players: [], picks: [], captains: [], scores: [], results: [], matchup: [], probabilities: [], events: [], recap: null })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
 
   const load = useCallback(async () => {
     const { data: week, error: weekError } = await supabase.from('weeks').select('*').eq('is_test', true).maybeSingle()
@@ -32,10 +33,18 @@ export default function TestLab({ onBack }) {
     return () => window.clearTimeout(timer)
   }, [load])
   const run = async (fn, args = {}) => {
-    setBusy(true); setError('')
-    const { error: rpcError } = await supabase.rpc(fn, args)
-    if (rpcError) setError(rpcError.message)
-    await load(); setBusy(false)
+    setBusy(true); setError(''); setMessage(fn === 'run_practice_readiness_test' ? 'Running draft, captains, game windows, and recap…' : 'Working…')
+    try {
+      const { data, error: rpcError } = await supabase.rpc(fn, args)
+      if (rpcError) setError(rpcError.message)
+      else if (fn === 'run_practice_readiness_test') setMessage(data?.recap_ready && data?.status === 'final' ? 'Full readiness test complete.' : 'The test finished, but one or more checks need attention.')
+      else setMessage('Done.')
+      await load()
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'The practice request could not be completed.')
+    } finally {
+      setBusy(false)
+    }
   }
   const player = (id) => state.players.find((item) => item.player_id === id)?.nfl_players
   const nextManager = state.profiles.find((profile) => profile.id === (state.picks.length % 2 === 0 ? state.week?.first_manager_id : state.profiles.find((item) => item.id !== state.week?.first_manager_id)?.id))
@@ -62,9 +71,9 @@ export default function TestLab({ onBack }) {
   ]
 
   return <div className="test-lab"><header className="draft-nav"><button onClick={onBack} className="back-button">←</button><div><p className="company">Commissioner tools</p><h1>Practice Lab</h1></div><span className="mock-badge">Isolated test data</span></header>
-    {!state.week ? <section className="test-intro"><p className="eyebrow">Safe sandbox</p><h2>Run a full week by yourself.</h2><p>This creates a separate practice matchup. Nothing here changes the real season or Luke’s permissions.</p><div><button disabled={busy} onClick={() => run('start_practice_week')}>Start manual test</button><button disabled={busy} onClick={() => run('run_practice_readiness_test')}>{busy ? 'Running full test…' : 'Run full readiness test'}</button></div></section> : <>
+    {!state.week ? <section className="test-intro"><p className="eyebrow">Safe sandbox</p><h2>Run a full week by yourself.</h2><p>This creates a separate practice matchup. Nothing here changes the real season or Luke’s permissions.</p><div><button disabled={busy} onClick={() => run('start_practice_week')}>Start manual test</button><button disabled={busy} onClick={() => run('run_practice_readiness_test')}>{busy ? 'Running full test…' : 'Run full readiness test'}</button></div>{message && <p className="test-feedback" role="status">{message}</p>}{error && <p className="draft-error" role="alert">Test failed: {error}</p>}</section> : <>
       <section className="test-toolbar"><div><p className="eyebrow">Practice status</p><h2>{state.week.status.replace('_', ' ')}</h2><span>{state.picks.length}/14 picks · {state.captains.length}/2 captains</span></div><div><button disabled={busy || state.picks.length === 14} onClick={() => run('practice_force_autodraft')}>Force auto-draft</button><button className="danger-button" disabled={busy} onClick={() => run('reset_practice_week')}>Reset practice</button></div></section>
-      {error && <p className="draft-error">{error}</p>}
+      {message && <p className="test-feedback" role="status">{message}</p>}{error && <p className="draft-error" role="alert">Test failed: {error}</p>}
       <section className="readiness-checklist"><div className="section-heading"><div><p className="eyebrow">Release test</p><h2>End-to-end readiness</h2></div><p>{readiness.filter((item) => item[1]).length}/6 checks passed</p></div><div>{readiness.map(([label, passed, detail]) => <article className={passed ? 'passed' : ''} key={label}><span>{passed ? '✓' : '·'}</span><div><strong>{label}</strong><small>{detail}</small></div></article>)}</div></section>
       {state.picks.length === 14 && <section className="game-simulator"><header><div><p className="eyebrow">Game Day Simulator</p><h2>Play the week from kickoff to recap.</h2><p>Choose both captains, then advance one NFL window at a time.</p></div>{nextStage && <button disabled={busy || state.captains.length < 2} onClick={() => run('practice_simulate_game_stage', { p_stage: nextStage })}>Play {nextStage} →</button>}</header><div className="simulation-track">{['thursday', 'sunday', 'monday'].map((stage, index) => <article className={completedStages.has(stage) ? 'complete' : nextStage === stage ? 'active' : ''} key={stage}><span>{completedStages.has(stage) ? '✓' : index + 1}</span><div><strong>{stage}</strong><small>{stage === 'thursday' ? 'Opening games' : stage === 'sunday' ? 'Main slate' : 'Final whistle + recap'}</small></div></article>)}</div>{state.probabilities.length > 0 && <div className="simulation-scoreboard">{state.probabilities.map((item) => <article key={item.manager_id}><span>{item.manager_name}</span><strong>{Number(item.current_points).toFixed(2)}</strong><div><i style={{ width: `${item.win_probability}%` }} /></div><small>{item.win_probability}% win chance · {item.players_remaining} left</small></article>)}</div>}{state.events.length > 0 && <div className="simulation-events">{state.events.map((event) => <p key={event.id}><b>{event.stage}</b>{event.summary}</p>)}</div>}</section>}
       <section className="test-needs"><div><p className="eyebrow">{nextManager?.display_name ?? 'Manager'} needs</p><strong>{nextNeeds.length} spots left</strong></div><div>{slotOrder.map((slot) => <span className={nextNeeds.includes(slot) ? '' : 'filled'} key={slot}><b>{nextNeeds.includes(slot) ? slot : '✓'}</b><small>{nextNeeds.includes(slot) ? (slot === 'FLEX' ? 'RB / WR / TE' : `Need ${slot.replace(/[12]/g, '')}`) : 'Filled'}</small></span>)}</div></section>
