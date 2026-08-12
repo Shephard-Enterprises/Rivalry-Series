@@ -130,7 +130,8 @@ footer p { margin: 0; text-transform: none; font-style: italic; letter-spacing: 
 
 .headshot-wrap { overflow: hidden; }
 .headshot-wrap > span { z-index: 2; right: 2px; bottom: 2px; }
-.player-headshot, .live-headshot img, .player-sheet-photo img, .test-headshot img { transform: scale(1.28); transform-origin: center bottom; }
+.player-headshot, .live-headshot img, .test-headshot img { transform: scale(1.48); transform-origin: center bottom; }
+.player-sheet-photo img { transform: scale(1.58); transform-origin: center bottom; }
 
 @media (max-width: 720px) {
   .app-shell { padding-top: 27px; }
