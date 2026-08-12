@@ -9,20 +9,23 @@ export function useMatchup() {
   const [profiles, setProfiles] = useState([])
   const [matchup, setMatchup] = useState(managers.map(emptyManager))
   const [timeline, setTimeline] = useState([])
+  const [lastScoreSync, setLastScoreSync] = useState(null)
   const [error, setError] = useState('')
 
   const loadScores = useCallback(async (activeWeek, managerProfiles) => {
     if (!supabase || !activeWeek) return
-    const [{ data: scores, error: scoreError }, { data: results, error: resultError }, { data: playerScores, error: playerError }, { data: probabilities, error: probabilityError }, { data: events, error: timelineError }] = await Promise.all([
+    const [{ data: scores, error: scoreError }, { data: results, error: resultError }, { data: playerScores, error: playerError }, { data: probabilities, error: probabilityError }, { data: events, error: timelineError }, { data: syncLog }] = await Promise.all([
       supabase.from('manager_week_scores').select('manager_id, fantasy_points, players_final, roster_size, is_official').eq('week_id', activeWeek.id),
       supabase.from('weekly_results').select('manager_id, result'),
       supabase.from('matchup_player_scores').select('*').eq('week_id', activeWeek.id).order('roster_slot'),
       supabase.from('manager_win_probabilities').select('manager_id, projected_final, players_remaining, win_probability').eq('week_id', activeWeek.id),
       supabase.from('game_day_events').select('id, type, title, body, manager_id, player_id, data, occurred_at').eq('week_id', activeWeek.id).order('occurred_at', { ascending: false }).limit(30),
+      supabase.from('provider_sync_log').select('finished_at, started_at').eq('provider', 'espn-live-stats').eq('status', 'success').order('started_at', { ascending: false }).limit(1).maybeSingle(),
     ])
     if (scoreError || resultError || playerError || probabilityError) { setError(scoreError?.message || resultError?.message || playerError?.message || probabilityError?.message); return }
     setError('')
     setTimeline(timelineError ? [] : (events ?? []))
+    setLastScoreSync(syncLog?.finished_at ?? syncLog?.started_at ?? null)
     setMatchup(managers.map((name) => {
       const profile = managerProfiles.find((item) => item.display_name === name)
       const score = scores?.find((item) => item.manager_id === profile?.id)
@@ -79,5 +82,5 @@ export function useMatchup() {
     return () => { supabase.removeChannel(channel) }
   }, [week, profiles, loadScores])
 
-  return { week, matchup, timeline, error, connected: isSupabaseConfigured }
+  return { week, matchup, timeline, lastScoreSync, error, connected: isSupabaseConfigured }
 }

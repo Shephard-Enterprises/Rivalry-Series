@@ -1,10 +1,20 @@
 const statusLabel = { scheduled: 'Upcoming', in_progress: 'Live', final: 'Final' }
 const initials = (name) => name.split(/\s+/).map((part) => part[0]).slice(0, 2).join('')
 
-export default function LiveMatchup({ matchup }) {
+const freshness = (value) => {
+  if (!value) return { label: 'Waiting for first update', stale: false }
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000))
+  if (minutes < 2) return { label: 'Updated just now', stale: false }
+  if (minutes < 10) return { label: `Updated ${minutes} min ago`, stale: false }
+  return { label: `Scores may be delayed · ${minutes} min ago`, stale: true }
+}
+
+export default function LiveMatchup({ matchup, lastScoreSync }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   if (!matchup.some((manager) => manager.players.length)) return null
+  const sync = freshness(lastScoreSync)
   return <section className="live-matchup-section"><div className="section-heading"><div><p className="eyebrow">Live matchup</p><h2>Every point matters</h2></div><p>Estimated odds update with ESPN scoring.</p></div>
+    <div className={`score-freshness${sync.stale ? ' stale' : ''}`}><i /> <span>{sync.label}</span><small>Automatic refresh every 2 minutes on game day</small></div>
     <div className="probability-card"><div className="probability-labels"><strong>{matchup[0].name} <b>{matchup[0].probability.toFixed(1)}%</b></strong><span>Win probability</span><strong><b>{matchup[1].probability.toFixed(1)}%</b> {matchup[1].name}</strong></div><div className="probability-track"><span style={{ width: `${matchup[0].probability}%` }} /></div><div className="projected-totals"><span>Projected {matchup[0].projectedFinal.toFixed(2)}</span><small>Estimate, not a guarantee</small><span>Projected {matchup[1].projectedFinal.toFixed(2)}</span></div></div>
     <div className="live-rosters">{matchup.map((manager) => <section className={`live-roster live-roster-${manager.name.toLowerCase()}`} key={manager.name}><header><div><p className="eyebrow">{manager.name}</p><h3>{manager.score.toFixed(2)} points</h3></div><span>{manager.players.filter((player) => player.game_status === 'final').length}/{manager.players.length} final</span></header><div>{manager.players.map((player) => <article className="live-player" role="button" tabIndex="0" onClick={() => setSelectedPlayer(player)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') setSelectedPlayer(player) }} key={player.player_id}><div className={`live-headshot pos-${player.position.toLowerCase()}`}><span>{initials(player.full_name)}</span>{player.headshot_url && <img src={player.headshot_url} alt={`${player.full_name} headshot`} loading="lazy" onError={(event) => { event.currentTarget.hidden = true }} />}</div><div><strong>{player.full_name}{player.is_captain && <b title="Captain · 1.25×">★</b>}</strong><p>{player.roster_slot} · {player.nfl_team} · {player.opponent}</p><small>{statusLabel[player.game_status] ?? player.game_status}{player.game_status !== 'final' && player.projected_remaining > 0 ? ` · ${player.projected_remaining.toFixed(1)} projected remaining` : ''}</small></div><div className="live-player-score"><strong>{player.counted_points.toFixed(2)}</strong>{player.is_captain && <span>{player.raw_points.toFixed(2)} × 1.25</span>}<small>Tap for details</small></div></article>)}</div></section>)}</div>
     <p className="probability-note">Win probability compares current points with each unfinished player’s weekly projection. It becomes more certain as games finish.</p>

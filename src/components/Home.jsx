@@ -8,7 +8,7 @@ import { useRecaps } from '../hooks/useRecaps'
 const weeklyDetails = [['Draft', 'Tuesday – Wednesday'], ['Matchup', 'Thursday – Monday'], ['Roster', '7 Players'], ['Scoring', 'Half PPR']]
 
 export default function Home({ onEnter, onHistory, onTest, onAdmin }) {
-  const { week, matchup, timeline, error, connected } = useMatchup()
+  const { week, matchup, timeline, lastScoreSync, error, connected } = useMatchup()
   const { articles, loading: newsLoading, error: newsError } = useNews()
   const { recaps, error: recapError } = useRecaps()
   const draftComplete = matchup.some((manager) => manager.rosterSize > 0)
@@ -22,7 +22,7 @@ export default function Home({ onEnter, onHistory, onTest, onAdmin }) {
       <div className="draft-panel"><div><span className="eyebrow">Week {week?.nfl_week ?? 1} draft · September 7</span><h3>{gamesStarted ? 'The matchup is live.' : 'The season starts here.'}</h3><p>{connected ? 'Live fantasy scores update automatically throughout every game.' : 'Connect Supabase to enable live matchup scoring.'}</p></div><div className="home-actions">{onAdmin && <button className="test-button" onClick={onAdmin}>Control center</button>}{onTest && <button className="test-button" onClick={onTest}>Practice lab</button>}<button className="history-button" onClick={onHistory}>History</button><button onClick={onEnter}>View draft <span>→</span></button></div></div>
       {error && <p className="draft-error">Live scores could not load: {error}</p>}
     </section>
-    <LiveMatchup matchup={matchup} />
+    <LiveMatchup matchup={matchup} lastScoreSync={lastScoreSync} />
     <GameDayTimeline events={timeline} />
     <ScrooberReport report={recaps[0]} />
     {recapError && <p className="draft-error">The Scroober Scrimage Report could not load: {recapError}</p>}
