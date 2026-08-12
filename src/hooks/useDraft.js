@@ -100,8 +100,7 @@ export function useDraft() {
     : Boolean(week && profile && clock >= new Date(week.draft_opens_at).getTime() && clock <= new Date(week.draft_closes_at).getTime())
   const queueOpen = !supabase || Boolean(week && profile && clock < new Date(week.draft_closes_at).getTime() && !complete)
   const roster = (manager) => picks.filter((pick) => pick.manager === manager).map((pick) => playerPool.find((player) => String(player.id) === String(pick.playerId))).filter(Boolean)
-  const canDraft = (player, manager = currentManager) => {
-    if (!draftOpen || complete || (supabase && profile?.display_name !== currentManager) || picks.some((pick) => String(pick.playerId) === String(player.id))) return false
+  const canFitRoster = (player, manager = profile?.display_name ?? currentManager) => {
     const mine = roster(manager)
     const positionCount = mine.filter((item) => item.position === player.position).length
     if (positionCount < rosterLimits[player.position]) return true
@@ -109,6 +108,10 @@ export function useDraft() {
       || mine.filter((item) => item.position === 'WR').length > 2
       || mine.filter((item) => item.position === 'TE').length > 1
     return ['RB', 'WR', 'TE'].includes(player.position) && !flexUsed
+  }
+  const canDraft = (player, manager = currentManager) => {
+    if (!draftOpen || complete || (supabase && profile?.display_name !== currentManager) || picks.some((pick) => String(pick.playerId) === String(player.id))) return false
+    return canFitRoster(player, manager)
   }
   const draft = async (player) => {
     if (!canDraft(player)) return
@@ -151,5 +154,5 @@ export function useDraft() {
     saveQueue(next)
   }
 
-  return { week, players: playerPool, picks, captains, queue, profile, syncStatus, error, currentManager, complete, draftOpen, queueOpen, roster, canDraft, draft, chooseCaptain, toggleQueue, moveQueue }
+  return { week, players: playerPool, picks, captains, queue, profile, syncStatus, error, currentManager, complete, draftOpen, queueOpen, roster, canFitRoster, canDraft, draft, chooseCaptain, toggleQueue, moveQueue }
 }
