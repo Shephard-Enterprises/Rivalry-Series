@@ -36,12 +36,16 @@ const numberAt = (labels: string[], stats: string[], label: string) => {
 
 function readBoxScore(payload: any) {
   const lines = new Map<string, StatLine>()
+  const aliases = new Map<string, string>()
   for (const team of payload?.boxscore?.players ?? []) {
     for (const category of team.statistics ?? []) {
       if (!['passing', 'rushing', 'receiving', 'fumbles'].includes(category.name)) continue
       for (const entry of category.athletes ?? []) {
         const espnId = entry?.athlete?.id
         if (!espnId) continue
+        const firstName = String(entry?.athlete?.firstName ?? '')
+        const lastName = String(entry?.athlete?.lastName ?? '').replace(/\s+(Jr\.|Sr\.|II|III|IV)$/i, '')
+        if (firstName && lastName) aliases.set(`${firstName[0]}.${lastName}`.toLowerCase(), espnId)
         const line = lines.get(espnId) ?? emptyLine()
         const labels: string[] = category.labels ?? []
         const stats: string[] = entry.stats ?? []
@@ -60,6 +64,26 @@ function readBoxScore(payload: any) {
           line.fumbles_lost = numberAt(labels, stats, 'LOST')
         }
         lines.set(espnId, line)
+      }
+    }
+  }
+
+  // ESPN's box score omits conversions. Detailed plays identify successful
+  // attempts as "A.Player pass to B.Player ... ATTEMPT SUCCEEDS" (or a run).
+  for (const drive of payload?.drives?.previous ?? []) {
+    for (const play of drive?.plays ?? []) {
+      const text = String(play?.text ?? '')
+      const marker = text.toUpperCase().lastIndexOf('TWO-POINT CONVERSION ATTEMPT.')
+      if (marker < 0 || !/ATTEMPT SUCCEEDS/i.test(text.slice(marker))) continue
+      const conversion = text.slice(marker).toLowerCase()
+      const credited = new Set<string>()
+      for (const [alias, espnId] of aliases) {
+        if (conversion.includes(alias) && !credited.has(espnId)) {
+          const line = lines.get(espnId) ?? emptyLine()
+          line.two_point_conversions += 1
+          lines.set(espnId, line)
+          credited.add(espnId)
+        }
       }
     }
   }
