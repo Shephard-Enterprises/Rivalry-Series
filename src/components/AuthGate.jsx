@@ -10,7 +10,7 @@ function isPasswordSetupLink() {
 function AuthCard({ eyebrow, title, description, children }) {
   return <main className="auth-shell">
     <section className="auth-card">
-      <div className="auth-brand"><div className="brand-mark"><span>RS</span></div><div><p className="company">Shephard Enterprises</p><h1>Rivalry <span>Series</span></h1></div></div>
+      <div className="auth-brand"><div className="brand-mark brand-image"><img src={`${import.meta.env.BASE_URL}rivalry-logo.jpg`} alt="Rivalry Series" /></div><div><p className="company">Shephard Enterprises</p><h1>Rivalry <span>Series</span></h1></div></div>
       <div className="auth-copy"><p className="eyebrow">{eyebrow}</p><h2>{title}</h2><p>{description}</p></div>
       {children}
       <p className="auth-tagline">One week. One roster. One winner.</p>

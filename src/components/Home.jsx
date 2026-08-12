@@ -10,7 +10,7 @@ export default function Home({ onEnter, onTest }) {
   const gamesStarted = matchup.some((manager) => manager.playersFinal > 0 || manager.score > 0)
   const status = gamesStarted ? 'Scores live' : draftComplete ? 'Rosters set' : 'Draft scheduled'
   return <>
-    <header className="brand-header"><div className="brand-mark"><span>RS</span></div><div><p className="company">Shephard Enterprises</p><h1>Rivalry <span>Series</span></h1></div><p className="tagline">One week. One roster. One winner.</p></header>
+    <header className="brand-header"><div className="brand-mark brand-image"><img src={`${import.meta.env.BASE_URL}rivalry-logo.jpg`} alt="Rivalry Series" /></div><div><p className="company">Shephard Enterprises</p><h1>Rivalry <span>Series</span></h1></div><p className="tagline">One week. One roster. One winner.</p></header>
     <section className="matchup-card">
       <div className="card-topline"><p>NFL Week {week?.nfl_week ?? 1}</p><span className="live-pill"><i /> {status}</span></div>
       <div className="matchup">{matchup.map((manager, index) => <div className="manager-wrap" key={manager.name}><article className="manager"><div className={`avatar avatar-${manager.name.toLowerCase()}`}>{manager.name[0]}</div><p className="manager-label">Manager</p><h2>{manager.name}</h2><p className="live-score">{manager.score.toFixed(2)}</p><p className="score-progress">{manager.rosterSize ? `${manager.playersFinal} of ${manager.rosterSize} final` : 'Roster pending'}</p><p className="record"><strong>{manager.wins}</strong> W&nbsp;&nbsp; <strong>{manager.losses}</strong> L&nbsp;&nbsp; <strong>{manager.ties}</strong> T</p></article>{index === 0 && <div className="versus"><span /><strong>VS</strong><span /></div>}</div>)}</div>
