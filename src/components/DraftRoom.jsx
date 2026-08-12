@@ -26,5 +26,6 @@ export default function DraftRoom({ onBack }) {
         <section className="history-card"><p className="eyebrow">Draft history</p>{picks.length === 0 ? <span className="empty-history">The first pick is waiting.</span> : [...picks].reverse().slice(0, 5).map((pick, index) => { const player = players.find((item) => item.id === pick.playerId); return <div className="history-pick" key={player.id}><b>{picks.length - index}</b><span><strong>{player.name}</strong>{pick.manager} · {player.position}</span></div> })}</section>
       </aside>
     </div>
+    <p className="data-credit">Player data: Sleeper · Schedule data: nflverse</p>
   </div>
 }
