@@ -6,6 +6,7 @@ import TestLab from './components/TestLab'
 import Chat from './components/Chat'
 import NotificationPanel from './components/NotificationPanel'
 import { useSocial } from './hooks/useSocial'
+import { usePushNotifications } from './hooks/usePushNotifications'
 import { supabase } from './lib/supabase'
 import './App.css'
 
@@ -14,12 +15,13 @@ function App() {
   const [commissioner, setCommissioner] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const social = useSocial()
+  const push = usePushNotifications(social.profile, social.unreadCount)
   useEffect(() => { supabase?.auth.getUser().then(({ data }) => setCommissioner(data.user?.id === 'ec754195-3838-4986-9b84-6d8b6d9dadcd')) }, [])
   return <AuthGate><main className="app-shell">
     <div className="ambient ambient-one" /><div className="ambient ambient-two" />
     <div className="app-actions"><button className="chat-button" type="button" onClick={() => setView('chat')} aria-label="Open rivalry chat">💬</button><button className="notification-button" type="button" onClick={() => setNotificationsOpen(true)} aria-label={`${social.unreadCount} unread notifications`}>♢{social.unreadCount > 0 && <span>{social.unreadCount > 9 ? '9+' : social.unreadCount}</span>}</button><button className="sign-out-button" type="button" onClick={() => supabase?.auth.signOut()}>Sign out</button></div>
     {view === 'home' ? <Home onEnter={() => setView('draft')} onTest={commissioner ? () => setView('test') : null} /> : view === 'test' ? <TestLab onBack={() => setView('home')} /> : view === 'chat' ? <Chat social={social} onBack={() => setView('home')} /> : <DraftRoom onBack={() => setView('home')} />}
-    {notificationsOpen && <NotificationPanel social={social} onClose={() => setNotificationsOpen(false)} onOpenChat={() => setView('chat')} />}
+    {notificationsOpen && <NotificationPanel social={social} push={push} onClose={() => setNotificationsOpen(false)} onOpenChat={() => setView('chat')} />}
     <footer><span>Rivalry Series</span><p>Built for the weeks that matter.</p><span>Est. 2026</span></footer>
   </main></AuthGate>
 }
