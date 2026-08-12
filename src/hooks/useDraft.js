@@ -65,10 +65,12 @@ export function useDraft() {
   const secondManager = managers.find((manager) => manager !== firstManager) || managers[1]
   const currentManager = picks.length % 2 === 0 ? firstManager : secondManager
   const complete = picks.length === 14
-  const draftOpen = !week || (clock >= new Date(week.draft_opens_at).getTime() && clock <= new Date(week.draft_closes_at).getTime())
+  const draftOpen = !supabase
+    ? true
+    : Boolean(week && profile && clock >= new Date(week.draft_opens_at).getTime() && clock <= new Date(week.draft_closes_at).getTime())
   const roster = (manager) => picks.filter((pick) => pick.manager === manager).map((pick) => players.find((player) => player.id === pick.playerId)).filter(Boolean)
   const canDraft = (player, manager = currentManager) => {
-    if (!draftOpen || complete || (profile && profile.display_name !== currentManager) || picks.some((pick) => pick.playerId === player.id)) return false
+    if (!draftOpen || complete || (supabase && profile?.display_name !== currentManager) || picks.some((pick) => pick.playerId === player.id)) return false
     const mine = roster(manager)
     const positionCount = mine.filter((item) => item.position === player.position).length
     if (positionCount < rosterLimits[player.position]) return true
@@ -80,15 +82,17 @@ export function useDraft() {
   const draft = async (player) => {
     if (!canDraft(player)) return
     setError('')
-    if (!supabase || !week) { setPicks((old) => [...old, { playerId: player.id, manager: currentManager }]); return }
+    if (!supabase) { setPicks((old) => [...old, { playerId: player.id, manager: currentManager }]); return }
+    if (!week || !profile) { setError('Your live manager profile is not ready. Refresh and sign in again.'); return }
     const { error: pickError } = await supabase.rpc('make_draft_pick', { p_week_id: week.id, p_player_id: String(player.id) })
     if (pickError) setError(pickError.message)
     else await loadDraft(week, profiles)
   }
   const chooseCaptain = async (manager, playerId) => {
-    if (profile && profile.display_name !== manager) return
+    if (supabase && profile?.display_name !== manager) return
     setError('')
-    if (!supabase || !week) { setCaptains((old) => ({ ...old, [manager]: playerId })); return }
+    if (!supabase) { setCaptains((old) => ({ ...old, [manager]: playerId })); return }
+    if (!week || !profile) { setError('Your live manager profile is not ready. Refresh and sign in again.'); return }
     const { error: captainError } = await supabase.rpc('select_captain', { p_week_id: week.id, p_player_id: String(playerId) })
     if (captainError) setError(captainError.message)
     else await loadDraft(week, profiles)
