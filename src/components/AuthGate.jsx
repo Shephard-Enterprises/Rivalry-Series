@@ -18,7 +18,7 @@ function AuthCard({ eyebrow, title, description, children }) {
   </main>
 }
 
-function Login() {
+function Login({ onForgotPassword }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -38,7 +38,33 @@ function Login() {
       <label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Your password" required /></label>
       {error && <p className="auth-error" role="alert">{error}</p>}
       <button type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+      <button className="auth-link-button" type="button" onClick={() => onForgotPassword(email)}>Forgot password?</button>
     </form>
+  </AuthCard>
+}
+
+function ResetPassword({ initialEmail, onBack }) {
+  const [email, setEmail] = useState(initialEmail)
+  const [error, setError] = useState('')
+  const [sent, setSent] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  async function submit(event) {
+    event.preventDefault(); setBusy(true); setError('')
+    const redirectTo = new URL(import.meta.env.BASE_URL, window.location.origin).toString()
+    const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo })
+    setBusy(false)
+    if (authError) { setError(authError.message); return }
+    setSent(true)
+  }
+
+  return <AuthCard eyebrow="Password recovery" title={sent ? 'Check your email.' : 'Reset your password.'} description={sent ? 'If that address belongs to a Rivalry Series manager, Supabase sent a secure recovery link. Open it on this device to choose a new password.' : 'Enter your manager email and we’ll send a secure link to create a new password.'}>
+    {sent ? <div className="auth-reset-sent"><strong>{email}</strong><p>Check spam or promotions if the message does not arrive within a few minutes.</p><button type="button" onClick={onBack}>Back to sign in</button></div> : <form className="auth-form" onSubmit={submit}>
+      <label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required /></label>
+      {error && <p className="auth-error" role="alert">{error}</p>}
+      <button type="submit" disabled={busy}>{busy ? 'Sending…' : 'Send reset link'}</button>
+      <button className="auth-link-button" type="button" onClick={onBack}>Back to sign in</button>
+    </form>}
   </AuthCard>
 }
 
@@ -74,6 +100,7 @@ export default function AuthGate({ children }) {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(isSupabaseConfigured)
   const [needsPassword, setNeedsPassword] = useState(isPasswordSetupLink)
+  const [resetEmail, setResetEmail] = useState(null)
 
   useEffect(() => {
     if (!supabase) return undefined
@@ -89,6 +116,7 @@ export default function AuthGate({ children }) {
   if (!isSupabaseConfigured) return children
   if (loading) return <AuthCard eyebrow="Rivalry Series" title="Loading…" description="Checking your manager session." />
   if (session && needsPassword) return <SetPassword onComplete={() => setNeedsPassword(false)} />
-  if (!session) return <Login />
+  if (!session && resetEmail !== null) return <ResetPassword initialEmail={resetEmail} onBack={() => setResetEmail(null)} />
+  if (!session) return <Login onForgotPassword={setResetEmail} />
   return children
 }
