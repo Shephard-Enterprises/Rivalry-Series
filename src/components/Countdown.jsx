@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 export default function Countdown({ deadline }) {
-  const [now, setNow] = useState(() => deadline.getTime())
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)

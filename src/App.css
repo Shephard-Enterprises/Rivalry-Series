@@ -64,6 +64,7 @@
 .draft-panel button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
 .draft-panel button svg { width: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .home-actions { display: flex; gap: 8px; }.draft-panel .test-button, .draft-panel .history-button { min-width: 105px; border: 1px solid #403b55; color: #9d96ae; background: #201e29; box-shadow: none; }
+.weekly-hub { display: grid; grid-template-columns: minmax(220px, 1fr) auto; }.weekly-hub-copy { min-width: 0; }.weekly-hub-timer { grid-column: 1; margin-top: 16px; }.weekly-hub-timer > span { display: block; margin-bottom: 6px; color: #6d6877; text-transform: uppercase; font-size: 7px; font-weight: 800; letter-spacing: 1px; }.weekly-hub .home-actions { grid-column: 2; grid-row: 1 / span 2; align-self: center; }.weekly-hub.phase-live { border-color: #315440; background: linear-gradient(100deg, rgba(42,157,105,.13), rgba(20,19,27,.7) 58%); }.weekly-hub.phase-captain_selection { border-color: #5b4929; background: linear-gradient(100deg, rgba(187,139,45,.12), rgba(20,19,27,.7) 58%); }
 .action-message { margin: 13px 0 -7px; color: #9b8cff; text-align: center; font-size: 11px; }
 
 .week-section { margin-top: 45px; }
@@ -158,6 +159,7 @@ footer p { margin: 0; text-transform: none; font-style: italic; letter-spacing: 
   .versus { gap: 5px; }.avatar { width: 74px; height: 74px; }
   .draft-panel { align-items: stretch; flex-direction: column; }.draft-panel button { width: 100%; }
   .home-actions { flex-direction: column; }
+  .weekly-hub { display: flex; }.weekly-hub .home-actions { align-self: stretch; }.weekly-hub-timer { margin-top: 4px; }
   .detail-grid { grid-template-columns: 1fr 1fr; }
   .news-grid { grid-template-columns: 1fr 1fr; }.news-featured { grid-column: span 2; }
   .live-rosters { grid-template-columns: 1fr; }
