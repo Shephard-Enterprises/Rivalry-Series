@@ -38,6 +38,10 @@ export function useMatchup() {
         players: (playerScores ?? []).filter((item) => item.manager_id === profile?.id).map((item) => ({
           ...item, raw_points: Number(item.raw_points), counted_points: Number(item.counted_points),
           projected_remaining: Number(item.projected_remaining), projection: item.projection == null ? null : Number(item.projection),
+          passing_yards: Number(item.passing_yards), passing_touchdowns: Number(item.passing_touchdowns), interceptions: Number(item.interceptions),
+          rushing_yards: Number(item.rushing_yards), rushing_touchdowns: Number(item.rushing_touchdowns), receptions: Number(item.receptions),
+          receiving_yards: Number(item.receiving_yards), receiving_touchdowns: Number(item.receiving_touchdowns),
+          fumbles_lost: Number(item.fumbles_lost), two_point_conversions: Number(item.two_point_conversions),
         })),
       }
     }))
