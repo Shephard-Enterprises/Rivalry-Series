@@ -6,6 +6,7 @@ export function useDraft() {
   const [week, setWeek] = useState(null)
   const [picks, setPicks] = useState([])
   const [captains, setCaptains] = useState({})
+  const [queue, setQueue] = useState([])
   const [profile, setProfile] = useState(null)
   const [profiles, setProfiles] = useState([])
   const [playerPool, setPlayerPool] = useState(isSupabaseConfigured ? [] : mockPlayers)
@@ -21,14 +22,16 @@ export function useDraft() {
 
   const loadDraft = useCallback(async (activeWeek, managerProfiles) => {
     if (!supabase || !activeWeek) return
-    const [{ data: pickRows, error: pickError }, { data: captainRows, error: captainError }] = await Promise.all([
+    const [{ data: pickRows, error: pickError }, { data: captainRows, error: captainError }, { data: queueRows, error: queueError }] = await Promise.all([
       supabase.from('draft_picks').select('pick_number, manager_id, player_id').eq('week_id', activeWeek.id).order('pick_number'),
       supabase.from('captains').select('manager_id, player_id').eq('week_id', activeWeek.id),
+      supabase.from('draft_queue').select('player_id, priority').eq('week_id', activeWeek.id).order('priority'),
     ])
-    if (pickError || captainError) { setError(pickError?.message || captainError?.message); setSyncStatus('error'); return }
+    if (pickError || captainError || queueError) { setError(pickError?.message || captainError?.message || queueError?.message); setSyncStatus('error'); return }
     const managerName = (id) => managerProfiles.find((item) => item.id === id)?.display_name
     setPicks((pickRows ?? []).map((pick) => ({ playerId: String(pick.player_id), manager: managerName(pick.manager_id), managerId: pick.manager_id })))
     setCaptains(Object.fromEntries((captainRows ?? []).map((captain) => [managerName(captain.manager_id), String(captain.player_id)])))
+    setQueue((queueRows ?? []).map((item) => String(item.player_id)))
     setSyncStatus('live')
   }, [])
 
@@ -81,6 +84,7 @@ export function useDraft() {
   const draftOpen = !supabase
     ? true
     : Boolean(week && profile && clock >= new Date(week.draft_opens_at).getTime() && clock <= new Date(week.draft_closes_at).getTime())
+  const queueOpen = !supabase || Boolean(week && profile && clock < new Date(week.draft_closes_at).getTime() && !complete)
   const roster = (manager) => picks.filter((pick) => pick.manager === manager).map((pick) => playerPool.find((player) => String(player.id) === String(pick.playerId))).filter(Boolean)
   const canDraft = (player, manager = currentManager) => {
     if (!draftOpen || complete || (supabase && profile?.display_name !== currentManager) || picks.some((pick) => String(pick.playerId) === String(player.id))) return false
@@ -111,5 +115,27 @@ export function useDraft() {
     else await loadDraft(week, profiles)
   }
 
-  return { week, players: playerPool, picks, captains, profile, syncStatus, error, currentManager, complete, draftOpen, roster, canDraft, draft, chooseCaptain }
+  const saveQueue = async (playerIds) => {
+    if (!queueOpen) return
+    setError('')
+    if (!supabase) { setQueue(playerIds); return }
+    const previous = queue
+    setQueue(playerIds)
+    const { error: queueError } = await supabase.rpc('set_draft_queue', { p_week_id: week.id, p_player_ids: playerIds })
+    if (queueError) { setQueue(previous); setError(queueError.message) }
+  }
+  const toggleQueue = (playerId) => {
+    const id = String(playerId)
+    saveQueue(queue.includes(id) ? queue.filter((item) => item !== id) : [...queue, id])
+  }
+  const moveQueue = (playerId, direction) => {
+    const index = queue.indexOf(String(playerId))
+    const nextIndex = index + direction
+    if (index < 0 || nextIndex < 0 || nextIndex >= queue.length) return
+    const next = [...queue]
+    ;[next[index], next[nextIndex]] = [next[nextIndex], next[index]]
+    saveQueue(next)
+  }
+
+  return { week, players: playerPool, picks, captains, queue, profile, syncStatus, error, currentManager, complete, draftOpen, queueOpen, roster, canDraft, draft, chooseCaptain, toggleQueue, moveQueue }
 }
