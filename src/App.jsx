@@ -13,7 +13,10 @@ import { supabase } from './lib/supabase'
 import './App.css'
 
 function App() {
-  const [view, setView] = useState('home')
+  const [view, setView] = useState(() => {
+    const requested = new URLSearchParams(window.location.search).get('view')
+    return ['draft', 'chat', 'history'].includes(requested) ? requested : 'home'
+  })
   const [commissioner, setCommissioner] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const social = useSocial()

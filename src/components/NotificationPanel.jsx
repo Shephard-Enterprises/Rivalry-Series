@@ -13,7 +13,7 @@ export default function NotificationPanel({ social, push, onClose, onOpenChat, o
   const open = async (notification) => {
     if (!notification.read_at) await social.markRead()
     if (['message', 'reaction'].includes(notification.type)) { onClose(); onOpenChat() }
-    if (['draft_turn', 'draft_auto_pick', 'draft_deadline', 'captain_selection', 'queue_stolen'].includes(notification.type)) { onClose(); onOpenDraft() }
+    if (['draft_open', 'draft_turn', 'draft_auto_pick', 'draft_deadline', 'captain_selection', 'captain_reminder', 'queue_stolen'].includes(notification.type)) { onClose(); onOpenDraft() }
   }
   const pushCopy = push.status === 'enabled' ? 'Lock-screen notifications enabled' : push.status === 'install_required' ? 'On iPhone: Share → Add to Home Screen, then enable notifications from the installed app.' : push.status === 'denied' ? 'Notifications are blocked in device settings.' : 'Get draft turns, messages, and matchup alerts when the app is closed.'
   const preset = (name) => {

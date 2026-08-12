@@ -40,8 +40,11 @@ Deno.serve(async (request) => {
     const { data: subscriptions } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', notification.recipient_id)
     for (const subscription of subscriptions ?? []) {
       try {
+        const destination = ['message', 'reaction'].includes(notification.type) ? './?view=chat'
+          : ['draft_open', 'draft_turn', 'draft_auto_pick', 'draft_deadline', 'captain_selection', 'captain_reminder', 'queue_stolen'].includes(notification.type) ? './?view=draft'
+          : notification.type === 'recap_ready' ? './?view=history' : './'
         await webpush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, JSON.stringify({
-          title: notification.title, body: notification.body, tag: `${notification.type}:${notification.id}`, url: './',
+          title: notification.title, body: notification.body, tag: `${notification.type}:${notification.id}`, url: destination,
         }))
         delivered += 1
       } catch (pushError: any) {
