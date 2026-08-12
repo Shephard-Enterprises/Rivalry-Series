@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-const newsUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=20'
+const newsUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=100'
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
 Deno.serve(async (request) => {
@@ -22,19 +22,24 @@ Deno.serve(async (request) => {
     const articles = (payload.articles ?? []).flatMap((article: any) => {
       const articleUrl = article?.links?.web?.href
       if (!article?.id || !article?.headline || !articleUrl) return []
+      const categories = (article.categories ?? []).map((category: any) => String(category.description ?? ''))
+      const fantasyTagged = categories.some((category: string) => /fantasy/i.test(category)) || /\/fantasy\/football\//i.test(articleUrl)
+      if (!fantasyTagged) return []
       return [{
         id: String(article.id),
-        source: 'ESPN',
+        source: 'ESPN Fantasy',
         headline: String(article.headline),
         description: article.description ? String(article.description) : null,
         article_url: String(articleUrl),
         image_url: article?.images?.[0]?.url ? String(article.images[0].url) : null,
         published_at: article.published || now,
-        categories: (article.categories ?? []).map((category: any) => category.description).filter(Boolean).slice(0, 12),
+        categories: categories.filter(Boolean).slice(0, 12),
         updated_at: now,
       }]
     })
     if (articles.length) {
+      const { error: deleteError } = await admin.from('news_articles').delete().in('source', ['ESPN', 'ESPN Fantasy'])
+      if (deleteError) throw deleteError
       const { error } = await admin.from('news_articles').upsert(articles, { onConflict: 'id' })
       if (error) throw error
     }

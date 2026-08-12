@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 const providerConfig = [
   { id: 'sleeper', action: 'players', label: 'Player catalog', source: 'Sleeper', maxAge: 26 * 60 * 60 * 1000 },
   { id: 'nflverse-schedule', action: 'schedule', label: 'NFL schedule', source: 'nflverse', maxAge: 26 * 60 * 60 * 1000 },
-  { id: 'espn-news', action: 'news', label: 'NFL news', source: 'ESPN', maxAge: 60 * 60 * 1000 },
+  { id: 'espn-news', action: 'news', label: 'Fantasy news', source: 'ESPN', maxAge: 60 * 60 * 1000 },
   { id: 'espn-live-stats', action: 'scores', label: 'Live scoring', source: 'ESPN', maxAge: 12 * 60 * 1000 },
 ]
 
