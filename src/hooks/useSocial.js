@@ -12,13 +12,13 @@ export function useSocial() {
   const load = useCallback(async (activeWeek, currentProfile) => {
     if (!supabase || !currentProfile) return
     const messageQuery = activeWeek
-      ? supabase.from('week_messages').select('id, sender_id, body, message_type, gif_id, gif_url, gif_title, reply_to_id, edited_at, created_at, profiles!inner(display_name)').eq('week_id', activeWeek.id).order('created_at').limit(200)
+      ? supabase.from('week_messages').select('id, sender_id, body, message_type, gif_id, gif_url, gif_title, reply_to_id, edited_at, created_at, profiles!week_messages_sender_id_fkey(display_name)').eq('week_id', activeWeek.id).order('created_at').limit(200)
       : Promise.resolve({ data: [], error: null })
     const messageResult = await messageQuery
     const messageIds = messageResult.data?.map((item) => item.id) ?? []
     const [notificationResult, reactionResult] = await Promise.all([
       supabase.from('notifications').select('id, week_id, type, title, body, data, read_at, created_at').order('created_at', { ascending: false }).limit(50),
-      activeWeek && messageIds.length ? supabase.from('message_reactions').select('message_id, user_id, emoji, profiles!inner(display_name)').in('message_id', messageIds) : Promise.resolve({ data: [], error: null }),
+      activeWeek && messageIds.length ? supabase.from('message_reactions').select('message_id, user_id, emoji, profiles!message_reactions_user_id_fkey(display_name)').in('message_id', messageIds) : Promise.resolve({ data: [], error: null }),
     ])
     if (messageResult.error || notificationResult.error || reactionResult.error) { setError(messageResult.error?.message || notificationResult.error?.message || reactionResult.error?.message); return }
     setMessages(messageResult.data ?? [])
