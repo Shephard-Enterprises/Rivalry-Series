@@ -114,6 +114,7 @@ Deno.serve(async (request) => {
     const latestLock = new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString()
     const { data: weeks, error: weekError } = await admin.from('weeks')
       .select('id, season, nfl_week, captain_locks_at')
+      .eq('is_test', false)
       .neq('status', 'final')
       .gte('captain_locks_at', earliestLock)
       .lte('captain_locks_at', latestLock)

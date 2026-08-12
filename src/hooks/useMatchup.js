@@ -39,7 +39,7 @@ export function useMatchup() {
     let active = true
     Promise.all([
       supabase.from('profiles').select('id, display_name'),
-      supabase.from('weeks').select('*').in('status', ['scheduled', 'drafting', 'captain_selection', 'live']).order('draft_opens_at').limit(1).maybeSingle(),
+      supabase.from('weeks').select('*').eq('is_test', false).in('status', ['scheduled', 'drafting', 'captain_selection', 'live']).order('draft_opens_at').limit(1).maybeSingle(),
     ]).then(([profileResult, weekResult]) => {
       if (!active) return
       if (profileResult.error || weekResult.error) { setError(profileResult.error?.message || weekResult.error?.message); return }

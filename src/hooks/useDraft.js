@@ -42,7 +42,7 @@ export function useDraft() {
       const [{ data: userData }, { data: managerProfiles, error: profilesError }, { data: activeWeek, error: weekError }] = await Promise.all([
         supabase.auth.getUser(),
         supabase.from('profiles').select('id, display_name'),
-        supabase.from('weeks').select('*').in('status', ['scheduled', 'drafting', 'captain_selection', 'live']).order('draft_opens_at').limit(1).maybeSingle(),
+        supabase.from('weeks').select('*').eq('is_test', false).in('status', ['scheduled', 'drafting', 'captain_selection', 'live']).order('draft_opens_at').limit(1).maybeSingle(),
       ])
       if (!active) return
       if (profilesError || weekError) { setError(profilesError?.message || weekError?.message); setSyncStatus('error'); return }
