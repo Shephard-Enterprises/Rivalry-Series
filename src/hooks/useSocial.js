@@ -12,7 +12,7 @@ export function useSocial() {
   const load = useCallback(async (activeWeek, currentProfile) => {
     if (!supabase || !currentProfile) return
     const messageQuery = activeWeek
-      ? supabase.from('week_messages').select('id, sender_id, body, message_type, gif_id, gif_url, gif_title, reply_to_id, edited_at, created_at, profiles!week_messages_sender_id_fkey(display_name)').eq('week_id', activeWeek.id).order('created_at').limit(200)
+      ? supabase.from('week_messages').select('id, week_id, sender_id, body, message_type, gif_id, gif_url, gif_title, reply_to_id, edited_at, created_at, profiles!week_messages_sender_id_fkey(display_name), weeks!inner(season)').eq('weeks.season', activeWeek.season).eq('weeks.is_test', false).order('created_at').limit(500)
       : Promise.resolve({ data: [], error: null })
     const messageResult = await messageQuery
     const messageIds = messageResult.data?.map((item) => item.id) ?? []
@@ -46,7 +46,7 @@ export function useSocial() {
     if (!supabase || !profile) return undefined
     const refresh = () => load(week, profile)
     const channel = supabase.channel(`social:${profile.id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'week_messages', filter: week ? `week_id=eq.${week.id}` : undefined }, refresh)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'week_messages' }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${profile.id}` }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, refresh)
       .subscribe()
