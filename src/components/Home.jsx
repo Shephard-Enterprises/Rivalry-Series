@@ -6,7 +6,7 @@ import { useRecaps } from '../hooks/useRecaps'
 
 const weeklyDetails = [['Draft', 'Tuesday – Wednesday'], ['Matchup', 'Thursday – Monday'], ['Roster', '7 Players'], ['Scoring', 'Half PPR']]
 
-export default function Home({ onEnter, onHistory, onTest }) {
+export default function Home({ onEnter, onHistory, onTest, onAdmin }) {
   const { week, matchup, error, connected } = useMatchup()
   const { articles, loading: newsLoading, error: newsError } = useNews()
   const { recaps, error: recapError } = useRecaps()
@@ -18,7 +18,7 @@ export default function Home({ onEnter, onHistory, onTest }) {
     <section className="matchup-card">
       <div className="card-topline"><p>NFL Week {week?.nfl_week ?? 1}</p><span className="live-pill"><i /> {status}</span></div>
       <div className="matchup">{matchup.map((manager, index) => <div className="manager-wrap" key={manager.name}><article className="manager"><div className={`avatar avatar-${manager.name.toLowerCase()}`}>{manager.name[0]}</div><p className="manager-label">Manager</p><h2>{manager.name}</h2><p className="live-score">{manager.score.toFixed(2)}</p><p className="score-progress">{manager.rosterSize ? `${manager.playersFinal} of ${manager.rosterSize} final` : 'Roster pending'}</p><p className="record"><strong>{manager.wins}</strong> W&nbsp;&nbsp; <strong>{manager.losses}</strong> L&nbsp;&nbsp; <strong>{manager.ties}</strong> T</p></article>{index === 0 && <div className="versus"><span /><strong>VS</strong><span /></div>}</div>)}</div>
-      <div className="draft-panel"><div><span className="eyebrow">Week {week?.nfl_week ?? 1} draft · September 7</span><h3>{gamesStarted ? 'The matchup is live.' : 'The season starts here.'}</h3><p>{connected ? 'Live fantasy scores update automatically throughout every game.' : 'Connect Supabase to enable live matchup scoring.'}</p></div><div className="home-actions">{onTest && <button className="test-button" onClick={onTest}>Practice lab</button>}<button className="history-button" onClick={onHistory}>History</button><button onClick={onEnter}>View draft <span>→</span></button></div></div>
+      <div className="draft-panel"><div><span className="eyebrow">Week {week?.nfl_week ?? 1} draft · September 7</span><h3>{gamesStarted ? 'The matchup is live.' : 'The season starts here.'}</h3><p>{connected ? 'Live fantasy scores update automatically throughout every game.' : 'Connect Supabase to enable live matchup scoring.'}</p></div><div className="home-actions">{onAdmin && <button className="test-button" onClick={onAdmin}>Control center</button>}{onTest && <button className="test-button" onClick={onTest}>Practice lab</button>}<button className="history-button" onClick={onHistory}>History</button><button onClick={onEnter}>View draft <span>→</span></button></div></div>
       {error && <p className="draft-error">Live scores could not load: {error}</p>}
     </section>
     <LiveMatchup matchup={matchup} />
