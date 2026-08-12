@@ -50,14 +50,14 @@ export function useDraft() {
       setProfile(foundProfile ?? null); setProfiles(managerProfiles ?? []); setWeek(activeWeek ?? null)
       if (activeWeek) {
         const [{ data: weekPlayerRows, error: playerError }, { data: scoreRows, error: scoreError }] = await Promise.all([
-          supabase.from('week_players').select('player_id, opponent, projection, ranking, available, nfl_players!inner(full_name, position, nfl_team, status, headshot_url, injury_notes)').eq('week_id', activeWeek.id).eq('available', true).order('ranking', { nullsFirst: false }),
-          supabase.from('player_fantasy_scores').select('player_id, fantasy_points').eq('season', activeWeek.season).eq('is_test', false).eq('is_official', true),
+          supabase.from('week_players').select('player_id, opponent, projection, ranking, available, game_starts_at, nfl_players!inner(full_name, position, nfl_team, status, headshot_url, injury_notes)').eq('week_id', activeWeek.id).eq('available', true).order('ranking', { nullsFirst: false }),
+          supabase.from('player_fantasy_scores').select('player_id, fantasy_points, nfl_week').eq('season', activeWeek.season).eq('is_test', false).eq('is_official', true).order('nfl_week', { ascending: false }),
         ])
         if (playerError || scoreError) { setError(playerError?.message || scoreError?.message); setSyncStatus('error'); return }
         const histories = new Map()
         for (const score of scoreRows ?? []) {
           const history = histories.get(String(score.player_id)) ?? []
-          history.push(Number(score.fantasy_points)); histories.set(String(score.player_id), history)
+          history.push({ points: Number(score.fantasy_points), week: score.nfl_week }); histories.set(String(score.player_id), history)
         }
         const positionRanks = new Map()
         setPlayerPool((weekPlayerRows ?? []).map((row) => {
@@ -67,11 +67,11 @@ export function useDraft() {
           const history = histories.get(String(row.player_id)) ?? []
           return {
           id: String(row.player_id), name: row.nfl_players.full_name, position: row.nfl_players.position,
-          team: row.nfl_players.nfl_team, opponent: row.opponent || 'Matchup TBD', projection: row.projection,
+          team: row.nfl_players.nfl_team, opponent: row.opponent || 'Matchup TBD', projection: row.projection, gameStartsAt: row.game_starts_at,
           status: row.nfl_players.status.charAt(0).toUpperCase() + row.nfl_players.status.slice(1),
           injuryNotes: row.nfl_players.injury_notes, headshotUrl: row.nfl_players.headshot_url,
-          positionRank, gamesPlayed: history.length,
-          fantasyAverage: history.length ? history.reduce((sum, points) => sum + points, 0) / history.length : null,
+          positionRank, gamesPlayed: history.length, recentScores: history.slice(0, 3),
+          fantasyAverage: history.length ? history.reduce((sum, game) => sum + game.points, 0) / history.length : null,
         }}))
         await loadDraft(activeWeek, managerProfiles ?? [])
       }
