@@ -23,13 +23,13 @@ export function useDraft() {
   const loadDraft = useCallback(async (activeWeek, managerProfiles) => {
     if (!supabase || !activeWeek) return
     const [{ data: pickRows, error: pickError }, { data: captainRows, error: captainError }, { data: queueRows, error: queueError }] = await Promise.all([
-      supabase.from('draft_picks').select('pick_number, manager_id, player_id').eq('week_id', activeWeek.id).order('pick_number'),
+      supabase.from('draft_picks').select('pick_number, manager_id, player_id, roster_slot, is_auto_pick').eq('week_id', activeWeek.id).order('pick_number'),
       supabase.from('captains').select('manager_id, player_id').eq('week_id', activeWeek.id),
       supabase.from('draft_queue').select('player_id, priority').eq('week_id', activeWeek.id).order('priority'),
     ])
     if (pickError || captainError || queueError) { setError(pickError?.message || captainError?.message || queueError?.message); setSyncStatus('error'); return }
     const managerName = (id) => managerProfiles.find((item) => item.id === id)?.display_name
-    setPicks((pickRows ?? []).map((pick) => ({ playerId: String(pick.player_id), manager: managerName(pick.manager_id), managerId: pick.manager_id })))
+    setPicks((pickRows ?? []).map((pick) => ({ playerId: String(pick.player_id), manager: managerName(pick.manager_id), managerId: pick.manager_id, rosterSlot: pick.roster_slot, isAutoPick: pick.is_auto_pick })))
     setCaptains(Object.fromEntries((captainRows ?? []).map((captain) => [managerName(captain.manager_id), String(captain.player_id)])))
     setQueue((queueRows ?? []).map((item) => String(item.player_id)))
     setSyncStatus('live')
@@ -49,16 +49,30 @@ export function useDraft() {
       const foundProfile = managerProfiles?.find((item) => item.id === userData.user?.id)
       setProfile(foundProfile ?? null); setProfiles(managerProfiles ?? []); setWeek(activeWeek ?? null)
       if (activeWeek) {
-        const { data: weekPlayerRows, error: playerError } = await supabase.from('week_players')
-          .select('player_id, opponent, projection, ranking, available, nfl_players!inner(full_name, position, nfl_team, status, headshot_url, injury_notes)')
-          .eq('week_id', activeWeek.id).eq('available', true).order('ranking', { nullsFirst: false })
-        if (playerError) { setError(playerError.message); setSyncStatus('error'); return }
-        setPlayerPool((weekPlayerRows ?? []).map((row) => ({
+        const [{ data: weekPlayerRows, error: playerError }, { data: scoreRows, error: scoreError }] = await Promise.all([
+          supabase.from('week_players').select('player_id, opponent, projection, ranking, available, nfl_players!inner(full_name, position, nfl_team, status, headshot_url, injury_notes)').eq('week_id', activeWeek.id).eq('available', true).order('ranking', { nullsFirst: false }),
+          supabase.from('player_fantasy_scores').select('player_id, fantasy_points').eq('season', activeWeek.season).eq('is_test', false).eq('is_official', true),
+        ])
+        if (playerError || scoreError) { setError(playerError?.message || scoreError?.message); setSyncStatus('error'); return }
+        const histories = new Map()
+        for (const score of scoreRows ?? []) {
+          const history = histories.get(String(score.player_id)) ?? []
+          history.push(Number(score.fantasy_points)); histories.set(String(score.player_id), history)
+        }
+        const positionRanks = new Map()
+        setPlayerPool((weekPlayerRows ?? []).map((row) => {
+          const position = row.nfl_players.position
+          const positionRank = (positionRanks.get(position) ?? 0) + 1
+          positionRanks.set(position, positionRank)
+          const history = histories.get(String(row.player_id)) ?? []
+          return {
           id: String(row.player_id), name: row.nfl_players.full_name, position: row.nfl_players.position,
           team: row.nfl_players.nfl_team, opponent: row.opponent || 'Matchup TBD', projection: row.projection,
           status: row.nfl_players.status.charAt(0).toUpperCase() + row.nfl_players.status.slice(1),
           injuryNotes: row.nfl_players.injury_notes, headshotUrl: row.nfl_players.headshot_url,
-        })))
+          positionRank, gamesPlayed: history.length,
+          fantasyAverage: history.length ? history.reduce((sum, points) => sum + points, 0) / history.length : null,
+        }}))
         await loadDraft(activeWeek, managerProfiles ?? [])
       }
       else setSyncStatus('live')
