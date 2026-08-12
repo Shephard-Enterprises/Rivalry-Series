@@ -18,13 +18,25 @@ Deno.serve(async (request) => {
   const delaySeconds = Math.min(Math.max(Number(body.delay_seconds) || 0, 0), 10)
   if (delaySeconds) await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000))
   let notificationQuery = admin.from('notifications')
-    .select('id, recipient_id, type, title, body').is('push_sent_at', null).lte('push_not_before', new Date().toISOString()).order('created_at').limit(50)
+    .select('id, recipient_id, type, title, body, data').is('push_sent_at', null).lte('push_not_before', new Date().toISOString()).order('created_at').limit(50)
   if (body.notification_id) notificationQuery = notificationQuery.eq('id', body.notification_id)
   const { data: notifications, error } = await notificationQuery
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: jsonHeaders })
 
   let delivered = 0
   for (const notification of notifications ?? []) {
+    const { data: preferences } = await admin.from('notification_preferences').select('*').eq('user_id', notification.recipient_id).maybeSingle()
+    const enabled = notification.type === 'message'
+      ? (notification.data?.message_type === 'gif' ? preferences?.gif_messages : preferences?.chat_messages)
+      : notification.type === 'reaction' ? preferences?.reactions
+      : ['draft_turn', 'draft_auto_pick', 'draft_deadline', 'captain_selection', 'queue_stolen'].includes(notification.type) ? preferences?.draft_alerts
+      : notification.type === 'win_probability' ? preferences?.scoring_alerts
+      : notification.type === 'recap_ready' ? preferences?.recap_alerts
+      : true
+    if (preferences && enabled === false) {
+      await admin.from('notifications').update({ push_sent_at: new Date().toISOString() }).eq('id', notification.id)
+      continue
+    }
     const { data: subscriptions } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', notification.recipient_id)
     for (const subscription of subscriptions ?? []) {
       try {

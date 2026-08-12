@@ -16,6 +16,7 @@ export function usePushNotifications(profile, unreadCount) {
   const [status, setStatus] = useState(supported ? 'checking' : 'unsupported')
   const [error, setError] = useState('')
   const [testStatus, setTestStatus] = useState('idle')
+  const [preferences, setPreferences] = useState(null)
 
   const syncSubscription = useCallback(async (subscription) => {
     if (!profile || !subscription) return
@@ -38,6 +39,14 @@ export function usePushNotifications(profile, unreadCount) {
     }).catch((registrationError) => { if (active) { setError(registrationError.message); setStatus('error') } })
     return () => { active = false }
   }, [profile, supported, syncSubscription])
+
+  useEffect(() => {
+    if (!profile) return
+    supabase.from('notification_preferences').select('*').eq('user_id', profile.id).maybeSingle().then(({ data, error: preferenceError }) => {
+      if (preferenceError) setError(preferenceError.message)
+      else setPreferences(data)
+    })
+  }, [profile])
 
   useEffect(() => {
     if (!('setAppBadge' in navigator)) return
@@ -64,5 +73,14 @@ export function usePushNotifications(profile, unreadCount) {
     setTestStatus('queued')
   }
 
-  return { status, error, testStatus, enable, sendTest, isiPhone, standalone }
+  const savePreferences = async (changes) => {
+    if (!profile) return false
+    const next = { ...preferences, ...changes, user_id: profile.id, updated_at: new Date().toISOString() }
+    setPreferences(next)
+    const { error: preferenceError } = await supabase.from('notification_preferences').upsert(next, { onConflict: 'user_id' })
+    if (preferenceError) { setError(preferenceError.message); return false }
+    return true
+  }
+
+  return { status, error, testStatus, preferences, enable, sendTest, savePreferences, isiPhone, standalone }
 }
