@@ -29,8 +29,8 @@ Deno.serve(async (request) => {
     const enabled = notification.type === 'message'
       ? (notification.data?.message_type === 'gif' ? preferences?.gif_messages : preferences?.chat_messages)
       : notification.type === 'reaction' ? preferences?.reactions
-      : ['draft_turn', 'draft_auto_pick', 'draft_deadline', 'captain_selection', 'queue_stolen'].includes(notification.type) ? preferences?.draft_alerts
-      : notification.type === 'win_probability' ? preferences?.scoring_alerts
+      : ['draft_open', 'draft_turn', 'draft_auto_pick', 'draft_deadline', 'captain_selection', 'captain_reminder', 'queue_stolen'].includes(notification.type) ? preferences?.draft_alerts
+      : ['kickoff', 'matchup_final', 'win_probability'].includes(notification.type) ? preferences?.scoring_alerts
       : notification.type === 'recap_ready' ? preferences?.recap_alerts
       : true
     if (preferences && enabled === false) {
