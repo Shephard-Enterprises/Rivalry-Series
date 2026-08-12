@@ -31,6 +31,7 @@ export function usePushNotifications(profile, unreadCount) {
     if (!supported || !profile) return undefined
     let active = true
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).then(async (registration) => {
+      await registration.update()
       const subscription = await registration.pushManager.getSubscription()
       if (subscription) await syncSubscription(subscription)
       if (active) setStatus(subscription ? 'enabled' : Notification.permission === 'denied' ? 'denied' : 'available')

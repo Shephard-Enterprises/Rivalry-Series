@@ -1,4 +1,4 @@
-const CACHE = 'rivalry-series-v2'
+const CACHE = 'rivalry-series-v3'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.add('./')).then(() => self.skipWaiting()))
