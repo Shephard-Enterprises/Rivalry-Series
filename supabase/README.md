@@ -5,4 +5,4 @@
 3. Create Justin and Luke through Supabase Auth, then insert matching `profiles` rows.
 4. Copy `.env.example` to `.env.local` and add the project URL and publishable anon key.
 
-The frontend remains in demo mode when those variables are absent. Draft picks use an atomic, server-validated transaction and are realtime-ready. The automatic deadline worker should be added after real NFL player identifiers and rankings are selected.
+The frontend remains in demo mode when those variables are absent. Draft picks use an atomic, server-validated transaction and are realtime-ready. Server-side workers process queued picks on the first minute tick after five minutes on the clock and apply the existing fallback when the draft closes. Each turn starts at the previous pick time (or draft opening for the first pick). Empty or ineligible queues wait until the draft closing deadline.
