@@ -31,7 +31,8 @@ export function useDraft() {
     const managerName = (id) => managerProfiles.find((item) => item.id === id)?.display_name
     setPicks((pickRows ?? []).map((pick) => ({ playerId: String(pick.player_id), manager: managerName(pick.manager_id), managerId: pick.manager_id, rosterSlot: pick.roster_slot, isAutoPick: pick.is_auto_pick })))
     setCaptains(Object.fromEntries((captainRows ?? []).map((captain) => [managerName(captain.manager_id), String(captain.player_id)])))
-    setQueue((queueRows ?? []).map((item) => String(item.player_id)))
+    const draftedIds = new Set((pickRows ?? []).map((pick) => String(pick.player_id)))
+    setQueue((queueRows ?? []).map((item) => String(item.player_id)).filter((id) => !draftedIds.has(id)))
     setSyncStatus('live')
   }, [])
 
@@ -140,6 +141,7 @@ export function useDraft() {
     setQueue(playerIds)
     const { error: queueError } = await supabase.rpc('set_draft_queue', { p_week_id: week.id, p_player_ids: playerIds })
     if (queueError) { setQueue(previous); setError(queueError.message) }
+    else await loadDraft(week, profiles)
   }
   const toggleQueue = (playerId) => {
     const id = String(playerId)
